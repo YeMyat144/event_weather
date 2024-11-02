@@ -2,6 +2,7 @@ import streamlit as st
 import requests
 from datetime import datetime, time
 import pandas as pd
+import random
 
 # Constants
 API_KEY = "901409775654935ad735712ac7b14df2"
@@ -23,8 +24,8 @@ def get_weather(lat, lon, units="metric", lang="en"):
         return None
 
 # App Title and Sidebar
-st.set_page_config(page_title="Weather-Based Event Planner", page_icon="🌦️")
-st.title("Weather-Based Event Planner")
+st.set_page_config(page_title="WeatherWise", page_icon="🌦️")
+st.title("WeatherWise 🌦️")
 st.write("Create events with weather insights and track RSVPs in real-time.")
 
 # Sidebar inputs for Event Creation
@@ -36,7 +37,14 @@ location = st.sidebar.text_input("Location (City name)", placeholder="e.g., New 
 units = st.sidebar.radio("Units", ["metric", "imperial"])
 lang = st.sidebar.selectbox("Language", ["en", "es", "fr", "de"])
 
-if st.sidebar.button("Create Event"):
+# Sample names for initial RSVP list
+sample_names = ["Alex", "Jordan", "Taylor", "Morgan", "Casey"]
+
+# Initialize RSVP list with sample names if not already set
+if 'rsvp_list' not in st.session_state:
+    st.session_state['rsvp_list'] = random.sample(sample_names, 3)  # Pick 3 random names
+
+if st.sidebar.button("Create"):
     if location:
         # Geocoding API to fetch latitude and longitude
         geocode_response = requests.get(
@@ -81,23 +89,27 @@ if st.sidebar.button("Create Event"):
                 
                 # RSVP section
                 st.subheader("RSVP to Event")
-                if 'rsvp_list' not in st.session_state:
-                    st.session_state['rsvp_list'] = []
                 
                 guest_name = st.text_input("Your Name", key="guest_name")
                 if st.button("RSVP"):
                     if guest_name:
                         st.session_state['rsvp_list'].append(guest_name)
                         st.success(f"RSVP confirmed for {guest_name}!")
+                        st.experimental_rerun() 
                     else:
                         st.error("Please enter your name.")
                 
-                # Display RSVP List as a table
+                # Display RSVP List with delete functionality
                 if st.session_state['rsvp_list']:
-                    rsvp_data = {"Guest": st.session_state['rsvp_list']}
-                    rsvp_df = pd.DataFrame(rsvp_data)
                     st.write("### RSVP List")
-                    st.table(rsvp_df)
+                    for i, guest in enumerate(st.session_state['rsvp_list']):
+                        col1, col2 = st.columns([3, 1])
+                        col1.write(guest)
+                        if col2.button("Delete", key=f"delete_{i}"):
+                            st.session_state['rsvp_list'].pop(i)
+                            st.success(f"{guest} has been removed from the RSVP list.")
+                            st.experimental_rerun()
+                    
             else:
                 st.error("Weather data could not be retrieved.")
         else:
